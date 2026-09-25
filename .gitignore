@@ -1,0 +1,18 @@
+# Secrets
+.env
+
+# Data: never commit raw data, caches, or derived firm-level datasets
+/data/
+/cache/
+*.parquet
+*.feather
+*.duckdb
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+build/
+dist/

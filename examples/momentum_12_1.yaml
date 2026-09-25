@@ -1,0 +1,22 @@
+spec_version: 1
+name: "12-1 momentum, value-weighted deciles"
+signal:
+  name: momentum
+  params: {lookback: 12, skip: 1}
+  direction: high
+  source: "Jegadeesh & Titman (1993), doi:10.1111/j.1540-6261.1993.tb04702.x"
+universe:
+  min_price: 5
+  min_mcap_pctile: 20        # drop microcaps (below the 20th NYSE percentile)
+  mcap_breakpoints: nyse
+portfolio:
+  construction: quantile_sort
+  quantiles: 10
+  side: long_short
+  weighting: value
+rebalance: monthly
+execution:
+  lag_days: 1                # signal at month-end close, trade at the next close
+  cost_bps_one_way: 15
+sample:
+  start: 1999-01-01
