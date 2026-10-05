@@ -218,3 +218,15 @@ def test_ensure_snapshot_builds_when_stale_and_falls_back(tmp_path, monkeypatch)
     lock.write_text("x")                                                            # another session is refreshing
     snap3, status3 = SD.ensure_snapshot("russell3000", log=lambda m: None)
     assert snap3 is not None and "another session" in status3
+
+
+def test_theme_config_matches_the_cli_flags():
+    import tomllib
+
+    from priors.app.theme import CLIENT, SIDEBAR, THEME, cli_flags
+
+    cfg = tomllib.loads((Path(__file__).resolve().parents[1] / ".streamlit" / "config.toml").read_text(encoding="utf-8"))
+    assert {k: v for k, v in cfg["theme"].items() if k != "sidebar"} == THEME
+    assert cfg["theme"]["sidebar"] == SIDEBAR and cfg["client"] == CLIENT
+    assert "--theme.primaryColor=" + THEME["primaryColor"] in cli_flags()
+    assert "--theme.showWidgetBorder=true" in cli_flags()

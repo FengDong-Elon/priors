@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import os
 import re
+from html import escape
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
+from priors import __version__
+from priors.app.theme import CSS
 from priors.classroom import BudgetedLLM, BudgetExceeded, NotEnrolled, classroom_from_env, classroom_llm
 from priors.factors import FactorLibrary
 from priors.data.sharadar_download import SharadarDownloadError, download_sharadar
@@ -40,8 +43,17 @@ MODES = {
     "dr_dong": ("Dr. Dong", "For a finished strategy. Two AI reviewers debate it, and Dr. Dong writes a strict, "
                             "journal-style referee report."),
 }
+MODE_LEVEL = {"mentor": "Guided · first idea", "analyst": "Hands-on · your own design", "dr_dong": "Referee review · strict"}
+WORKFLOW = [("Literature", "An evidence card from published research"),
+            ("Theory gate", "A mechanism in your own words"),
+            ("Pre-registration", "The plan is locked before any test"),
+            ("Tests", "Benchmarks, placebo, sealed holdout"),
+            ("Report", "Main report, appendix, referee review")]
 PRIVACY = ("Your messages are sent to an AI provider (Anthropic). Do not enter personal information. "
            "Priors is for education; nothing here is investment advice.")
+REPO = "https://github.com/FengDong-Elon/priors"
+MANUAL = f"{REPO}/blob/main/USER_MANUAL.md"
+DOI = "https://doi.org/10.5281/zenodo.23149420"
 load_dotenv()
 
 
@@ -62,7 +74,36 @@ PROXY_URL = os.environ.get("PRIORS_PROXY_URL", "")
 LOCAL_KEY = os.environ.get("ANTHROPIC_API_KEY") if os.environ.get("PRIORS_ALLOW_LOCAL_KEY") == "1" else None
 HOSTED = os.environ.get("PRIORS_HOSTED") == "1"   # set on a hosted deployment: no local-only features
 
-st.set_page_config(page_title="Priors", page_icon=":books:", layout="wide")
+st.set_page_config(page_title="Priors · Evidence-based factor investing", page_icon=":material/menu_book:",
+                   layout="wide", menu_items={"Get help": MANUAL, "Report a bug": f"{REPO}/issues",
+                                              "About": f"**Priors {__version__}**: a literature-first teaching tool "
+                                                       f"for evidence-based factor investing. [Source]({REPO}) · "
+                                                       f"[Cite]({DOI})"})
+st.html(CSS)
+
+
+def html(markup: str, sidebar: bool = False) -> None:
+    (st.sidebar if sidebar else st).markdown(markup, unsafe_allow_html=True)
+
+
+def masthead(kicker: str, title: str, sub: str = "") -> None:
+    html(f'<div class="pr-mast"><div class="pr-kicker">{escape(kicker)}</div><div class="pr-title">{escape(title)}'
+         f'</div>{f"<div class=pr-sub>{escape(sub)}</div>" if sub else ""}</div>')
+
+
+def section(title: str) -> None:
+    html(f'<div class="pr-section">{escape(title)}</div>')
+
+
+def steps(items: list[tuple[str, str]], done: list[bool] | None = None) -> None:
+    """A row of numbered steps; with ``done``, finished steps are shaded and the next one is underlined."""
+    now = next((i for i, d in enumerate(done or []) if not d), None) if done is not None else None
+    cells = []
+    for i, (name, desc) in enumerate(items):
+        cls = "pr-step" + (" done" if done and done[i] else "") + (" now" if i == now else "")
+        mark = "Done" if done and done[i] else ("Next" if i == now else f"Step {i + 1}")
+        cells.append(f'<div class="{cls}"><span class="n">{mark}</span><b>{escape(name)}</b>{escape(desc)}</div>')
+    html(f'<div class="pr-steps">{"".join(cells)}</div>')
 
 
 # ----------------------------------------------------------------- resources
@@ -124,15 +165,17 @@ def guarded(label: str, fn, *args, **kwargs):
 
 def sidebar() -> None:
     with st.sidebar:
-        st.title("Priors")
-        st.caption("Start from the literature, not from the chart.")
+        html('<div class="pr-brand">Priors</div>'
+             '<div class="pr-brand-sub">Start from the literature, not from the chart.</div>')
+        st.divider()
+        html('<div class="pr-label">Connection</div>')
         if "llm" not in state():
             options = (["Class code"] if (CLASSES or PROXY_URL) else []) + ["My own API key"] + (["This computer's key"] if LOCAL_KEY else [])
-            how = st.radio("Connect", options)
+            how = st.radio("Connect", options, label_visibility="collapsed")
             if how == "Class code":
                 code = st.text_input("Class code")
                 sid = st.text_input("Student id")
-                if st.button("Connect", type="primary"):
+                if st.button("Connect", type="primary", width="stretch"):
                     try:
                         if CLASSES:
                             state()["llm"] = classroom_llm(CLASSES, code, sid, projects_root().parent / "classroom_usage.sqlite")
@@ -144,19 +187,21 @@ def sidebar() -> None:
                     except (ValueError, NotEnrolled, RuntimeError) as e:
                         st.error(str(e))
             elif how == "This computer's key":
-                if st.button("Connect", type="primary"):
+                st.caption("Uses the API key saved in this computer's .env file.")
+                if st.button("Connect", type="primary", width="stretch"):
                     state()["llm"] = make_llm(api_key=LOCAL_KEY)
                     state()["who"] = ("local key", "")
                     st.rerun()
             else:
                 key = st.text_input("Anthropic API key", type="password", help="Kept in this browser session only.")
-                if st.button("Connect", type="primary") and key:
+                if st.button("Connect", type="primary", width="stretch") and key:
                     state()["llm"] = make_llm(api_key=key)
                     state()["who"] = ("own key", "")
                     st.rerun()
         else:
             who = state().get("who", ("", ""))
-            st.success(f"Connected ({who[0]}{' / ' + who[1] if who[1] else ''})")
+            html(f'<div class="pr-status"><span class="pr-dot"></span>Connected · {escape(who[0])}'
+                 f'{" / " + escape(who[1]) if who[1] else ""}</div>')
             llm = state()["llm"]
             if isinstance(llm, BudgetedLLM):
                 st.caption(f"This week: ${llm.spent():.2f} of ${llm.student.config.weekly_budget_usd:.2f} used")
@@ -172,50 +217,61 @@ def sidebar() -> None:
         s = session()
         if s is not None:
             st.divider()
-            st.markdown(f"**Project:** {state().get('project_name')}")
-            st.markdown(f"**Mode:** {MODES[s.mode][0]}")
+            html('<div class="pr-label">Project</div>')
             led = s.registry.ledger.summary()
-            st.caption(f"Specifications tested: {led['trials']} ({led['exploratory_trials']} exploratory) · "
-                       f"holdouts opened: {led['holdouts_opened']}")
             snap = state().get("snapshot_meta")
-            st.caption(f"Stock data ({snap.get('source', 'yfinance')}) as of {snap['as_of'][:10]}" if snap
-                       else "Stock data: not available")
-            prog = s.progress()
-            st.markdown(f"**Progress:** {prog['status']}")
-            st.caption(" · ".join(f"{'✓' if done else '○'} {name}" for name, done in prog["steps"].items()))
+            rows = {"Name": state().get("project_name") or "", "Mode": MODES[s.mode][0],
+                    "Status": s.progress()["status"].capitalize(),
+                    "Specifications tested": f"{led['trials']} ({led['exploratory_trials']} exploratory)",
+                    "Holdouts opened": str(led["holdouts_opened"]),
+                    "Stock data": (f"{snap.get('source', 'yfinance')}, {snap['as_of'][:10]}" if snap else "not available")}
+            html('<table class="pr-kv">' + "".join(f"<tr><td>{escape(k)}</td><td>{escape(v)}</td></tr>"
+                                                    for k, v in rows.items()) + "</table>")
+            st.write("")
             st.download_button("Download project file", export_project(s.registry.root, state().get("student", ""),
                                                                        state().get("project_name", "")),
                                f"{slug(state().get('project_name', 'project'))}.priors.zip", "application/zip",
-                               help="Save your work. Upload it later on the start screen to continue.")
+                               help="Save your work. Upload it later on the start screen to continue.",
+                               icon=":material/download:", width="stretch")
             others = [m for m in MODES if m != s.mode]
-            target = st.selectbox("Switch mode", others, format_func=lambda m: MODES[m][0])
-            if st.button("Switch"):
+            c1, c2 = st.columns([3, 2], vertical_alignment="bottom")
+            target = c1.selectbox("Switch mode", others, format_func=lambda m: MODES[m][0])
+            if c2.button("Switch", width="stretch"):
                 s.upgrade(target)
                 s.save_state()
                 st.rerun()
-            if st.button("Close project"):
+            if st.button("Close project", icon=":material/close:", width="stretch"):
                 state().pop("session", None)
                 st.rerun()
         st.divider()
-        st.caption(PRIVACY)
+        html(f'<div class="pr-foot"><a href="{MANUAL}" target="_blank">User manual</a> · '
+             f'<a href="{REPO}" target="_blank">Source code</a> · <a href="{DOI}" target="_blank">Cite</a><br>'
+             f'Priors {__version__} · MIT license<br><br>{escape(PRIVACY)}</div>')
 
 
 # --------------------------------------------------------------- start screen
 
 def start_screen() -> None:
-    st.header("Priors")
-    st.write("An AI research assistant for evidence-based factor investing. Every idea starts from what the "
-             "research says, is tested without data mining, and is reviewed the way a journal would review it.")
+    masthead("Evidence-based factor investing · a teaching tool", "Priors",
+             "Every idea starts from what the research says, is tested without data mining, and is reviewed the way "
+             "a journal would review it.")
+    steps(WORKFLOW)
     if "llm" not in state():
-        st.info("Connect in the sidebar first.")
+        st.info("Connect in the sidebar first: use your class code, or your own Anthropic API key.",
+                icon=":material/login:")
+        section("Three ways to work")
+        mode_cards(clickable=False)
         return
-    c1, c2 = st.columns(2)
-    student = c1.text_input("Your name or id", value=state().get("who", ("", ""))[1])
-    project = c2.text_input("Project name", value="my first strategy")
-    universe = st.selectbox("Stock universe", ["russell3000", "russell1000"],
-                            format_func=lambda u: "Top 3,000 U.S. stocks" if u == "russell3000" else "Top 1,000 U.S. stocks")
-    sources = available_sources()
-    source = st.selectbox("Stock data", sources, format_func=lambda x: SOURCES[x]) if len(sources) > 1 else sources[0]
+    section("Your project")
+    with st.container(border=True):
+        c1, c2 = st.columns(2)
+        student = c1.text_input("Your name or id", value=state().get("who", ("", ""))[1])
+        project = c2.text_input("Project name", value="my first strategy")
+        sources = available_sources()
+        c3, c4 = st.columns(2)
+        universe = c3.selectbox("Stock universe", ["russell3000", "russell1000"],
+                                format_func=lambda u: "Top 3,000 U.S. stocks" if u == "russell3000" else "Top 1,000 U.S. stocks")
+        source = c4.selectbox("Stock data", sources, format_func=lambda x: SOURCES[x], disabled=len(sources) == 1)
     if not HOSTED and "sharadar" not in sources:
         with st.expander("Use your own Sharadar data (downloads to this computer)"):
             st.caption("Enter your own Nasdaq Data Link API key with a Sharadar subscription. The data is saved on "
@@ -240,14 +296,24 @@ def start_screen() -> None:
                              keep_mode=True)
             except ProjectFileError as e:
                 st.error(str(e))
-    st.subheader("Choose a mode")
-    cols = st.columns(3)
-    for col, (mode, (name, desc)) in zip(cols, MODES.items()):
-        with col:
-            st.markdown(f"#### {name}")
+    section("Choose a mode")
+    chosen = mode_cards(clickable=True)
+    if chosen:
+        open_project(student, project, chosen, universe, source)
+
+
+def mode_cards(clickable: bool) -> str | None:
+    """The three modes side by side; returns the mode whose Start button was pressed."""
+    chosen = None
+    for col, (mode, (name, desc)) in zip(st.columns(3), MODES.items()):
+        with col.container(border=True):
+            html(f'<div class="pr-kicker">{escape(MODE_LEVEL[mode])}</div>')
+            st.markdown(f"### {name}")
             st.write(desc)
-            if st.button(f"Start in {name}", key=f"start_{mode}", type="primary" if mode == "mentor" else "secondary"):
-                open_project(student, project, mode, universe, source)
+            if clickable and st.button(f"Start in {name}", key=f"start_{mode}", width="stretch",
+                                       type="primary" if mode == "mentor" else "secondary"):
+                chosen = mode
+    return chosen
 
 
 def open_project(student: str, project: str, mode: str, universe: str, source: str = "yfinance",
@@ -289,10 +355,10 @@ def show_card(s: Session) -> None:
 
 def show_spec(s: Session) -> None:
     sp = s.spec
-    st.markdown(f"**Strategy:** {sp.name}")
+    section(sp.name)
     st.dataframe(pd.DataFrame([{"factor": c.factor, "name": s.lib.info.loc[c.factor, "name"] if c.factor in s.lib.info.index else "",
                                 "theory priority": c.theory_priority, "stock signal": c.stock_signal or "factor layer only"}
-                               for c in sp.components]), hide_index=True, use_container_width=True)
+                               for c in sp.components]), hide_index=True, width="stretch")
     st.caption(f"Combination: {sp.factor_layer.combination.replace('_', ' ')} · mechanism tests: "
                f"{', '.join(sp.mechanism_tests)} · stock layer: top {sp.stock_layer.holdings}, "
                f"{sp.stock_layer.rebalance}, {sp.stock_layer.cost_bps_one_way:.0f} bp")
@@ -570,12 +636,12 @@ def results_tab(s: Session) -> None:
         st.warning(EXPLORATORY_LABEL)
     m = res.metrics["composite"]
     c = st.columns(4)
-    c[0].metric("Mean return per year", f"{m['mean_ann']:.1%}")
-    c[1].metric("Sharpe ratio", f"{m['sharpe']:.2f}", help=f"95% CI {m['sharpe_ci_low']:.2f} to {m['sharpe_ci_high']:.2f}")
-    c[2].metric("t-statistic (NW)", f"{m['t_stat_mean_nw']:.2f}", help="Harvey, Liu and Zhu (2016) suggest t > 3.")
-    c[3].metric("Max drawdown", f"{m['max_drawdown']:.0%}")
+    c[0].metric("Mean return per year", f"{m['mean_ann']:.1%}", border=True)
+    c[1].metric("Sharpe ratio", f"{m['sharpe']:.2f}", help=f"95% CI {m['sharpe_ci_low']:.2f} to {m['sharpe_ci_high']:.2f}", border=True)
+    c[2].metric("t-statistic (NW)", f"{m['t_stat_mean_nw']:.2f}", help="Harvey, Liu and Zhu (2016) suggest t > 3.", border=True)
+    c[3].metric("Max drawdown", f"{m['max_drawdown']:.0%}", border=True)
     st.caption(f"{res.sample['start']} to {res.sample['end']} · before trading costs · {res.period.replace('_', ' ')}")
-    st.image(charts.cumulative_growth(res.returns), use_container_width=True)
+    st.image(charts.cumulative_growth(res.returns), width="stretch")
     for name, lines in r.dossier.sections.items():
         if name in ("Strategy", "Factor layer"):
             continue
@@ -583,12 +649,13 @@ def results_tab(s: Session) -> None:
             for line in lines:
                 st.markdown(f"- {line}")
     if r.composite is not None:
-        st.markdown("**What each factor contributes**")
+        section("What each factor contributes")
         st.dataframe(pd.DataFrame({"Sharpe share": r.composite.shapley_share, "Risk share": r.composite.risk_contribution,
                                    "Removal effect": r.composite.leave_one_out["change_if_removed"]}).style.format("{:.2f}"))
     if r.holdings is not None:
-        st.markdown(f"**Current holdings (as of {r.holdings.as_of})** · {r.holdings.label}")
-        st.dataframe(r.holdings.table.drop(columns=["mcap"]), use_container_width=True)
+        section(f"Current holdings, as of {r.holdings.as_of}")
+        st.caption(r.holdings.label)
+        st.dataframe(r.holdings.table.drop(columns=["mcap"]), width="stretch")
     for n in r.notes:
         st.info(n)
 
@@ -597,9 +664,14 @@ def report_tab(s: Session) -> None:
     if s.results is None and s.unsupported is None:
         st.info("Run the tests first, or conclude that the idea is not supported.")
         return
-    st.write("The main report is short enough to hand in. The technical appendix has every exhibit, the full "
-             "evidence card, the full referee report, and the conversation.")
-    if st.button("Build the PDF reports", type="primary"):
+    c1, c2 = st.columns(2)
+    with c1.container(border=True):
+        st.markdown("### Main report")
+        st.write("A short report to hand in: the hypothesis, the results, the credibility checks, and the verdict.")
+    with c2.container(border=True):
+        st.markdown("### Technical appendix")
+        st.write("Every exhibit, the full evidence card, the full referee report, and the conversation.")
+    if st.button("Build the PDF reports", type="primary", icon=":material/picture_as_pdf:"):
         built = guarded("Building...", build_reports, s, student=state().get("student"))
         if built is None:
             return
@@ -610,8 +682,10 @@ def report_tab(s: Session) -> None:
         state()["pdf_app"] = app.save_pdf(tmp / "appendix.pdf").read_bytes()
     if "pdf_main" in state():
         c1, c2 = st.columns(2)
-        c1.download_button("Download the main report (PDF)", state()["pdf_main"], "priors_report.pdf", "application/pdf")
-        c2.download_button("Download the technical appendix (PDF)", state()["pdf_app"], "priors_appendix.pdf", "application/pdf")
+        c1.download_button("Download the main report (PDF)", state()["pdf_main"], "priors_report.pdf", "application/pdf",
+                           icon=":material/download:", width="stretch")
+        c2.download_button("Download the technical appendix (PDF)", state()["pdf_app"], "priors_appendix.pdf",
+                           "application/pdf", icon=":material/download:", width="stretch")
 
 
 # ---------------------------------------------------------------------- main
@@ -624,11 +698,14 @@ def main() -> None:
         return
     if "llm" in state():
         s.llm = state()["llm"]
+    masthead(f"{MODES[s.mode][0]} mode · {MODE_LEVEL[s.mode]}", state().get("project_name") or "Project")
+    prog = s.progress()
+    steps([(name, "") for name in prog["steps"]], done=list(prog["steps"].values()))
     if state().get("data_notice"):
-        st.info(state()["data_notice"])
-    work, results, report = st.tabs(["Work", "Results", "Report"])
+        st.info(state()["data_notice"], icon=":material/info:")
+    work, results, report = st.tabs([":material/edit_note: Work", ":material/monitoring: Results",
+                                     ":material/description: Report"])
     with work:
-        st.subheader(f"{MODES[s.mode][0]} mode")
         if s.mode == "mentor":
             mentor_work(s)
         else:
