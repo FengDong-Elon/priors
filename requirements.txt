@@ -1,0 +1,2 @@
+# Used by Streamlit Community Cloud: installs Priors itself with the app extras.
+.[app]
