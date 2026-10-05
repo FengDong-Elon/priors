@@ -75,5 +75,7 @@ CSS = f"""
 .pr-kv td:first-child {{ color: {MUTED}; width: 42%; padding-right: .5rem; }}
 .pr-foot {{ font-size: .76rem; color: {MUTED}; line-height: 1.5; }}
 .pr-foot a {{ color: {NAVY}; text-decoration: none; }}
+[data-testid="stChatMessageAvatarAssistant"] {{ background-color: {NAVY}; color: #fff; }}
+[data-testid="stChatMessageAvatarUser"] {{ background-color: #8FA3BC; color: #fff; }}
 </style>
 """
