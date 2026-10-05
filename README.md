@@ -1,5 +1,7 @@
 # Priors
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23149421.svg)](https://doi.org/10.5281/zenodo.23149421)
+
 *Start from the literature, not from the chart.*
 
 Priors is an open-source teaching tool for evidence-based factor investing. A student describes an investment idea; Priors searches the academic literature, tests the idea only if theory supports it, guides the student through revisions without data mining, and writes a report. An AI reviewer, Dr. Dong, can then review the strategy the way a journal referee would.
@@ -57,6 +59,14 @@ pytest
 ```
 
 Tests use synthetic data; checks against live sources are skipped when offline.
+
+## Citation
+
+If you use Priors in teaching or research, please cite:
+
+> Dong, Feng. 2026. *Priors: A Literature-First AI Teaching Tool for Evidence-Based Factor Investing* (Version 1.0.0) [Software]. Elon University. https://doi.org/10.5281/zenodo.23149421
+
+GitHub's "Cite this repository" button gives the same citation in APA and BibTeX formats.
 
 ## License
 
