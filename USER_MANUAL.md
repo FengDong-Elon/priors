@@ -48,7 +48,11 @@ At any point before testing you can revise freely with the Mentor's help. After 
 
 ### In a class
 
-Your instructor gives you a web address and a class code. Open the address in any browser. Nothing needs to be installed.
+Your instructor gives you a web address (for example https://priors-elon.streamlit.app/) and a class code. Open the address in any browser. Nothing needs to be installed.
+
+### Without a class code
+
+Open https://priors-elon.streamlit.app/ and choose **My own API key** in the sidebar.
 
 ### On your own computer
 

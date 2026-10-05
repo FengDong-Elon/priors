@@ -6,6 +6,8 @@ Priors is an open-source teaching tool for evidence-based factor investing. A st
 
 Priors is for education. It does not give investment advice or recommend any security.
 
+**Try it:** https://priors-elon.streamlit.app/ (students sign in with their class code; anyone else can use their own Anthropic API key).
+
 ## How it works
 
 1. **Connect.** Use a class code (the instructor's account, with a weekly budget per student) or your own Anthropic API key. Stock data defaults to free Yahoo Finance data; licensed Sharadar data can be used on your own computer.
