@@ -1,6 +1,6 @@
 # Priors
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23149421.svg)](https://doi.org/10.5281/zenodo.23149421)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23149420.svg)](https://doi.org/10.5281/zenodo.23149420)
 
 *Start from the literature, not from the chart.*
 
@@ -64,7 +64,7 @@ Tests use synthetic data; checks against live sources are skipped when offline.
 
 If you use Priors in teaching or research, please cite:
 
-> Dong, Feng. 2026. *Priors: A Literature-First AI Teaching Tool for Evidence-Based Factor Investing* (Version 1.0.0) [Software]. Elon University. https://doi.org/10.5281/zenodo.23149421
+> Dong, Feng. 2026. *Priors: A Literature-First AI Teaching Tool for Evidence-Based Factor Investing* [Software]. Elon University. https://doi.org/10.5281/zenodo.23149420
 
 GitHub's "Cite this repository" button gives the same citation in APA and BibTeX formats.
 
