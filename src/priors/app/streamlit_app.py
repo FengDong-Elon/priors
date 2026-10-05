@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import re
+import traceback
 from html import escape
 from pathlib import Path
 
@@ -145,9 +146,12 @@ def session() -> Session | None:
 
 def guarded(label: str, fn, *args, **kwargs):
     """Run a step with a spinner and turn expected errors into messages for the student."""
+    state()["_step_failed"] = True
     try:
         with st.spinner(label):
-            return fn(*args, **kwargs)
+            out = fn(*args, **kwargs)
+        state()["_step_failed"] = False
+        return out
     except GateFailed as e:
         st.error(e.result.explain())
     except (FlowError, HoldoutError, ValueError) as e:
@@ -157,8 +161,15 @@ def guarded(label: str, fn, *args, **kwargs):
     except (BudgetExceeded, NotEnrolled, SharadarDownloadError, ProjectFileError) as e:
         st.error(str(e))
     except Exception as e:  # network and API errors
+        traceback.print_exc()   # appears in the server log (Streamlit Cloud: Manage app)
         st.error(f"Something went wrong: {type(e).__name__}: {e}")
     return None
+
+
+def rerun_if_ok() -> None:
+    """Refresh the page after a step, unless it failed: a refresh would wipe the error message."""
+    if not state().get("_step_failed"):
+        st.rerun()
 
 
 # ------------------------------------------------------------------- sidebar
@@ -387,7 +398,7 @@ def gate_and_register(s: Session) -> None:
             st.info(s.gate.advisory)
         if s.gate.passed and c2.button("Pre-register (this locks the plan)"):
             guarded("Registering...", s.register)
-            st.rerun()
+            rerun_if_ok()
     revise_panel(s)
     if s.allow_exploratory:
         st.caption("You can also test without registering, but results will be labeled exploratory and kept out of "
@@ -408,7 +419,7 @@ def conclude_control(s: Session) -> None:
                        "strategy and test it instead.")
         if st.button("Yes, conclude: not supported", key="confirm_conclude", type="primary"):
             guarded("Writing the literature assessment...", s.conclude_unsupported)
-            st.rerun()
+            rerun_if_ok()
 
 
 def revise_panel(s: Session) -> None:
@@ -418,15 +429,15 @@ def revise_panel(s: Session) -> None:
         q = st.text_area("Ask the Mentor, or describe the change you are considering", key="coach_q")
         if st.button("Ask the Mentor") and q.strip():
             guarded("Thinking...", s.coach, q)
-            st.rerun()
+            rerun_if_ok()
         refined = st.text_input("A refined idea to search the literature again", key="refined_idea")
         c1, c2, c3 = st.columns(3)
         if c1.button("Search the literature again") and refined.strip():
             guarded("Searching the literature again...", s.research_again, refined)
-            st.rerun()
+            rerun_if_ok()
         if c2.button("Propose a different strategy"):
             guarded("Designing a strategy...", s.propose)
-            st.rerun()
+            rerun_if_ok()
         with c3:
             conclude_control(s)
 
@@ -437,7 +448,7 @@ def revision_after_results(s: Session) -> None:
         ok = st.checkbox("I understand that a revision is a new trial.", key="rev_ok")
         if ok and st.button("Start a revision"):
             guarded("Starting a revision...", s.start_revision)
-            st.rerun()
+            rerun_if_ok()
 
 
 def show_unsupported(s: Session) -> None:
@@ -461,7 +472,7 @@ def run_tests(s: Session, period: str = "in_sample") -> None:
     res = guarded("Running the tests (about half a minute)...", s.run, period=period)
     if res is not None:
         guarded("Writing the explanation...", s.explain)
-        st.rerun()
+        rerun_if_ok()
 
 
 def mentor_work(s: Session) -> None:
@@ -477,20 +488,20 @@ def mentor_work(s: Session) -> None:
         msg = st.chat_input("Your idea or answer")
         if msg:
             guarded("Thinking...", s.interview, msg)
-            st.rerun()
+            rerun_if_ok()
         return
     st.success(f"Idea: {s.idea.summary}")
     if s.card is None:
         if st.button("Search the research", type="primary"):
             guarded("Searching the literature and reading abstracts (about half a minute)...", s.research)
-            st.rerun()
+            rerun_if_ok()
         return
     show_card(s)
     if s.spec is None:
         c1, c2 = st.columns(2)
         if c1.button("Propose a strategy", type="primary"):
             guarded("Designing a strategy from published factors...", s.propose)
-            st.rerun()
+            rerun_if_ok()
         with c2:
             conclude_control(s)
         return
@@ -593,7 +604,7 @@ def register_from_analyst(s: Session) -> None:
                 st.warning(s.gate.explain())
             if s.gate.passed and s.registration is None and st.button("Pre-register"):
                 guarded("Registering...", s.register)
-                st.rerun()
+                rerun_if_ok()
 
 
 def analyst_or_dr_dong_work(s: Session) -> None:
@@ -627,7 +638,7 @@ def analyst_or_dr_dong_work(s: Session) -> None:
     else:
         if st.button("Request Dr. Dong's review (about four minutes)", type="primary"):
             guarded("Advocate and Reviewer 2 are debating; Dr. Dong is writing the report...", s.review)
-            st.rerun()
+            rerun_if_ok()
         if s.dr_dong:
             rep = s.dr_dong.report
             st.subheader(f"Dr. Dong: {rep.recommendation.replace('_', ' ').upper()}")

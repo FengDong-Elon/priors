@@ -156,6 +156,13 @@ def test_app_click_through_mentor(tmp_path, monkeypatch):
     assert any("not supported by the literature" in h.value for h in at.subheader)
     click("Withdraw this conclusion and keep working")
     assert at.session_state["session"].unsupported is None
+
+    def broken():
+        raise RuntimeError("upstream overloaded")
+    at.session_state["session"].propose = broken
+    click("Propose a strategy")                    # a failed step keeps its error message on screen
+    assert any("upstream overloaded" in e.value for e in at.error)
+    del at.session_state["session"].propose
     click("Propose a strategy")
     click("Check the theory gate")
     assert any("passes the theory gate" in s.value for s in at.success)
