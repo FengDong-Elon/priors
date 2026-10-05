@@ -1,2 +1,2 @@
-# Used by Streamlit Community Cloud: installs Priors itself with the app extras.
-.[app]
+# Used by Streamlit Community Cloud. Editable install, so the app always runs the code in this repository.
+-e .[app]
