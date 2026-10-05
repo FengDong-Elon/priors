@@ -1,0 +1,20 @@
+# A two-factor strategy: value plus momentum (Asness, Moskowitz & Pedersen, 2013).
+spec_version: 3
+name: Value + momentum
+status: exploratory
+components:
+  - factor: HML
+    stock_signal: book_to_market
+    source: "Fama & French (1993), doi:10.1016/0304-405X(93)90023-5"
+    theory_priority: 2
+  - factor: UMD
+    stock_signal: mom_12_1
+    source: "Jegadeesh & Titman (1993), doi:10.1111/j.1540-6261.1993.tb04702.x"
+    theory_priority: 1
+factor_layer:
+  combination: equal_weight
+stock_layer:
+  universe: russell3000
+  holdings: 40
+  rebalance: monthly
+  cost_bps_one_way: 20

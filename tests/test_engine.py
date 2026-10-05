@@ -6,7 +6,7 @@ from priors.data import SyntheticProvider
 from priors.data.calendar import assign_periods, rebalance_dates
 from priors.engine import run_backtest, summarize
 from priors.engine.signals import compute_signal
-from priors.spec import StrategySpec
+from priors.spec import StockSpec
 
 MOM_SPEC = """
 name: synthetic momentum
@@ -17,8 +17,8 @@ execution: {lag_days: 0, cost_bps_one_way: 0}
 """
 
 
-def spec(**overrides) -> StrategySpec:
-    s = StrategySpec.from_yaml(MOM_SPEC)
+def spec(**overrides) -> StockSpec:
+    s = StockSpec.from_yaml(MOM_SPEC)
     return s.model_copy(update=overrides)
 
 
@@ -109,12 +109,12 @@ def test_spec_fingerprint_ignores_name():
     c = a.model_copy(update={"rebalance": "weekly"})
     assert a.fingerprint() == b.fingerprint()
     assert a.fingerprint() != c.fingerprint()
-    assert StrategySpec.from_yaml(a.to_yaml()) == a
+    assert StockSpec.from_yaml(a.to_yaml()) == a
 
 
 def test_spec_rejects_unknown_keys():
     with pytest.raises(Exception):
-        StrategySpec.from_yaml(MOM_SPEC + "\nleverage: 3\n")
+        StockSpec.from_yaml(MOM_SPEC + "\nleverage: 3\n")
 
 
 def test_rebalance_calendar():

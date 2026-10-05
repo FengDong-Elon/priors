@@ -37,6 +37,7 @@ def summarize(r: pd.Series, periods_per_year: int) -> dict[str, float]:
         "sharpe_ci_low": (sr - 1.96 * se) * math.sqrt(ppy),
         "sharpe_ci_high": (sr + 1.96 * se) * math.sqrt(ppy),
         "t_stat_mean": mean / (sd / math.sqrt(t)) if sd > 0 else np.nan,
+        "t_stat_mean_nw": newey_west_t(r),
         "max_drawdown": drawdown.min(),
         "max_drawdown_periods": _longest_underwater(drawdown),
         "hit_rate": (r > 0).mean(),
@@ -45,6 +46,24 @@ def summarize(r: pd.Series, periods_per_year: int) -> dict[str, float]:
         "best": r.max(),
         "worst": r.min(),
     }
+
+
+def newey_west_t(r: pd.Series, lags: int | None = None) -> float:
+    """t-stat of the mean with a Newey-West (Bartlett) standard error.
+
+    Default lag length: floor(4 * (T / 100) ** (2 / 9)), the Newey-West (1994) rule.
+    """
+    x = r.dropna().to_numpy(dtype=float)
+    t = len(x)
+    if t < 3:
+        return np.nan
+    if lags is None:
+        lags = int(math.floor(4 * (t / 100) ** (2 / 9)))
+    e = x - x.mean()
+    s = e @ e / t
+    for k in range(1, min(lags, t - 1) + 1):
+        s += 2 * (1 - k / (lags + 1)) * (e[k:] @ e[:-k]) / t
+    return float(x.mean() / math.sqrt(s / t)) if s > 0 else np.nan
 
 
 def _longest_underwater(drawdown: pd.Series) -> int:

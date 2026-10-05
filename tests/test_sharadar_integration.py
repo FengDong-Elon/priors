@@ -43,7 +43,7 @@ def test_momentum_deciles_match_ken_french():
 
     from priors.data import SharadarProvider
     from priors.engine import run_backtest
-    from priors.spec import StrategySpec
+    from priors.spec import StockSpec
 
     lines = open(os.environ["FRENCH_MOM10_PATH"]).read().splitlines()
     start = next(i for i, l in enumerate(lines) if "Value Weight Returns -- Monthly" in l) + 1
@@ -52,7 +52,7 @@ def test_momentum_deciles_match_ken_french():
     fr.index = pd.PeriodIndex(fr.index.astype(str), freq="M")
     french = fr["Hi PRIOR"] - fr["Lo PRIOR"]
 
-    spec = StrategySpec.from_yaml("""
+    spec = StockSpec.from_yaml("""
 name: French momentum deciles
 signal: {name: momentum, params: {lookback: 12, skip: 1}}
 universe: {min_price: null, min_mcap_pctile: null}

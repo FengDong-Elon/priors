@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ title }}: {{ strategy }}</title>
+<style>
+  @page { size: letter; margin: 2.2cm 2.2cm 2.4cm 2.2cm;
+          @frame footer { -pdf-frame-content: footer; bottom: 0.9cm; margin-left: 2.2cm; margin-right: 2.2cm; height: 1.6cm; } }
+  body { font-family: "Times New Roman", Times-Roman, Times, serif; font-size: 11pt; line-height: 1.35; color: #000; background: #fff;
+         max-width: 46rem; margin: 0 auto; padding: 1.5rem 1rem; }
+  h1 { font-size: 16pt; margin: 0 0 4pt 0; }
+  h2 { font-size: 13pt; margin: 14pt 0 4pt 0; }
+  p { margin: 0 0 5pt 0; }
+  .meta { font-size: 10pt; margin-bottom: 8pt; }
+  .status { font-weight: bold; }
+  .label { font-size: 9pt; font-style: italic; margin: 0 0 2pt 0; }
+  .exhibit { margin: 6pt 0 8pt 0; }
+  .exhibit-title { font-weight: bold; margin: 8pt 0 3pt 0; -pdf-keep-with-next: true; }
+  .label { -pdf-keep-with-next: true; }
+  table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+  th { border-top: 1.5px solid #000; border-bottom: 0.75px solid #000; padding: 3px 5px; text-align: right; font-weight: normal; }
+  td { padding: 2px 5px; text-align: right; vertical-align: top; }
+  th.l, td.l { text-align: left; }
+  table.small { font-size: 8.5pt; }
+  tr.last td { border-bottom: 1.5px solid #000; }
+  .note { font-size: 9pt; margin: 2pt 0 6pt 0; }
+  ul.compact { font-size: 9.5pt; }
+  img { max-width: 100%; }
+  ul { margin: 2pt 0 6pt 0; padding-left: 14pt; }
+  li { margin: 0 0 2pt 0; padding: 0; }
+  .disclaimer { font-size: 9.5pt; border-top: 0.75px solid #000; padding-top: 4pt; margin-top: 16pt; }
+  .appendix-head { page-break-before: always; }
+  #footer { font-size: 8.5pt; text-align: center; }
+</style>
+</head>
+<body>
+<h1>{{ title }}</h1>
+<div class="meta">Strategy: {{ strategy }}{% if student %} &middot; Student: {{ student }}{% endif %} &middot; Mode: {{ mode }} &middot; Generated {{ generated }}<br>
+<span class="status">Status: {% if status == "preregistered" %}pre-registered{% elif status == "not tested" %}not tested (literature assessment){% else %}{{ exploratory_label }}{% endif %}</span></div>
+
+{% macro render(sec) %}
+<h2>{{ sec.title }}</h2>
+{% for p in sec.paragraphs %}<p>{{ p | safe }}</p>{% endfor %}
+{% for b in sec.html_blocks %}{{ b | safe }}{% endfor %}
+{% for e in sec.exhibits %}
+<div class="exhibit">
+  {% if e.label %}<p class="label">{{ e.label }}</p>{% endif %}
+  <p class="exhibit-title">{{ e.number }}. {{ e.title }}</p>
+  {% if e.kind == "table" %}
+  <table repeat="1"{% if e.small %} class="small"{% endif %}>
+    <tr>{% for c in e.columns %}<th{% if loop.index <= e.left %} class="l"{% endif %}{% if e.widths %} width="{{ e.widths[loop.index0] }}%"{% endif %}>{{ c }}</th>{% endfor %}</tr>
+    {% for row in e.rows %}<tr{% if loop.last %} class="last"{% endif %}>{% for v in row %}<td{% if loop.index <= e.left %} class="l"{% endif %}>{{ v }}</td>{% endfor %}</tr>{% endfor %}
+  </table>
+  {% else %}
+  <img src="{{ e.src }}" alt="{{ e.title }}" width="430">
+  {% endif %}
+  <p class="note"><b>Note:</b> {{ e.note }}</p>
+</div>
+{% endfor %}
+{% if sec.bullets %}<ul{% if sec.compact %} class="compact"{% endif %}>{% for b in sec.bullets %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+{% endmacro %}
+
+{% for sec in main %}{{ render(sec) }}{% endfor %}
+
+{% if appendix %}
+<h2 class="appendix-head">Appendix</h2>
+{% for sec in appendix %}{{ render(sec) }}{% endfor %}
+{% endif %}
+
+<p class="disclaimer">{{ disclaimer }}</p>
+<div id="footer">Priors &middot; {{ strategy }} &middot; <pdf:pagenumber></div>
+</body>
+</html>

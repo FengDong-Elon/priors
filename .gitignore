@@ -16,3 +16,9 @@ __pycache__/
 .venv/
 build/
 dist/
+
+# Generated reports (contain data-derived holdings; never commit)
+/reports_out/
+
+# Local editor and tool settings
+.claude/

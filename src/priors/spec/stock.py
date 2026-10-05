@@ -1,4 +1,4 @@
-"""The strategy spec: the single, human-readable definition of a strategy."""
+"""Stock-level backtest spec (v0.1 engine). Used by the stock layer; see strategy.py for the full strategy spec."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ class Sample(_Strict):
     end: date | None = None
 
 
-class StrategySpec(_Strict):
+class StockSpec(_Strict):
     spec_version: Literal[1] = 1
     name: str
     hypothesis_id: str | None = None
@@ -67,7 +67,7 @@ class StrategySpec(_Strict):
     sample: Sample = Field(default_factory=Sample)
 
     @model_validator(mode="after")
-    def _check(self) -> "StrategySpec":
+    def _check(self) -> "StockSpec":
         if self.sample.start and self.sample.end and self.sample.start >= self.sample.end:
             raise ValueError("sample.start must be before sample.end")
         return self
@@ -88,11 +88,11 @@ class StrategySpec(_Strict):
     # ------------------------------------------------------------------- I/O
 
     @classmethod
-    def from_yaml(cls, text: str) -> "StrategySpec":
+    def from_yaml(cls, text: str) -> "StockSpec":
         return cls.model_validate(yaml.safe_load(text))
 
     @classmethod
-    def load(cls, path: str | Path) -> "StrategySpec":
+    def load(cls, path: str | Path) -> "StockSpec":
         return cls.from_yaml(Path(path).read_text(encoding="utf-8"))
 
     def to_yaml(self) -> str:

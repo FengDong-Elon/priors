@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from ..data.base import Panel
-from ..spec.schema import Portfolio, Universe
+from ..spec.stock import Portfolio, Universe
 
 
 def eligible(panel: Panel, u: Universe) -> pd.DataFrame:

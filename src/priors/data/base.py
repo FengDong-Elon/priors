@@ -31,6 +31,8 @@ FIELD_DOCS: dict[str, str] = {
     "mcap": "Market capitalization in USD at signal_dates[k].",
     "dollar_volume": "Mean daily dollar volume over the period ending at signal_dates[k].",
     "volatility": "Std. dev. of daily returns over the period ending at signal_dates[k] (not annualized).",
+    "high52": "Close at signal_dates[k] divided by the highest close over the previous 252 trading days.",
+    "beta": "Market beta from daily returns over the previous 252 trading days (at least 126).",
 }
 
 FORWARD_FIELDS = frozenset({"ret_next"})

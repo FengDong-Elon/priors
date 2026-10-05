@@ -9,7 +9,7 @@ import pandas as pd
 
 from .. import __version__
 from ..data.base import DataProvider, Panel
-from ..spec.schema import StrategySpec
+from ..spec.stock import StockSpec
 from .metrics import PERIODS_PER_YEAR, summarize
 from .portfolio import eligible, weights
 from .signals import compute_signal
@@ -17,7 +17,7 @@ from .signals import compute_signal
 
 @dataclass
 class BacktestResult:
-    spec: StrategySpec
+    spec: StockSpec
     returns: pd.DataFrame          # gross, cost, net, long, [short], benchmark
     turnover: pd.Series            # one-way turnover per period, averaged across legs
     n_long: pd.Series
@@ -45,7 +45,7 @@ class BacktestResult:
         return pd.concat([df, extra.to_frame()]).loc[:, list(df.columns)]
 
 
-def run_backtest(spec: StrategySpec, data: DataProvider | Panel) -> BacktestResult:
+def run_backtest(spec: StockSpec, data: DataProvider | Panel) -> BacktestResult:
     panel = data if isinstance(data, Panel) else data.panel(spec.rebalance, spec.execution.lag_days)
     if panel.freq != spec.rebalance:
         raise ValueError(f"Panel frequency {panel.freq!r} does not match spec rebalance {spec.rebalance!r}")
