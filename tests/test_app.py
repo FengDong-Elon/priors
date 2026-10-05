@@ -173,6 +173,25 @@ def test_app_click_through_mentor(tmp_path, monkeypatch):
     assert at.session_state["session"].results.outcome.status == "preregistered"
 
 
+    # explore first, then register the same plan and open the sealed holdout (Mentor mode)
+    at.session_state["session"].start_new_idea()
+    at.run()
+    at.chat_input[0].set_value("buy recent winners").run()
+    click("Search the research")
+    click("Propose a strategy")
+    click("Check the theory gate")
+    click("Explore without registering")
+    assert at.session_state["session"].results.outcome.status == "exploratory"
+    click("Pre-register (this locks the plan)")
+    assert at.session_state["session"].registration.in_sample_seen
+    at.checkbox[0].check().run()
+    click("Open the holdout")                      # the synthetic data end before the holdout window
+    assert not at.exception, at.exception
+    assert any("No holdout months" in e.value for e in at.error)
+    reg = at.session_state["session"].registration
+    assert not at.session_state["session"].registry.ledger.holdout_opened(reg.id)   # a failed run keeps the holdout
+
+
 def test_sharadar_source_only_when_configured(tmp_path, monkeypatch):
     import priors.stockdata as SD
 

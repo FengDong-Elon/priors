@@ -36,9 +36,20 @@ class Citation(BaseModel):
         return (self.doi or self.url or self.title).lower()
 
     def short(self) -> str:
-        first = self.authors.split(",")[0].split(" ")[-1]
-        etal = " et al." if "," in self.authors else ""
-        return f"{first}{etal} ({self.year})"
+        """Author-year reference: 'Fama (1970)', 'George and Hwang (2004)', 'Fama et al. (1969)'."""
+        names = [_surname(a) for a in self.authors.split(",") if a.strip()]
+        if len(names) >= 3:
+            who = f"{names[0]} et al."
+        elif len(names) == 2:
+            who = f"{names[0]} and {names[1]}"
+        else:
+            who = names[0] if names else "Anonymous"
+        return f"{who} ({self.year})"
+
+
+def _surname(name: str) -> str:
+    last = name.strip().split(" ")[-1]
+    return last.title() if last.isupper() and len(last) > 1 else last   # OpenAlex sometimes has 'GEORGE'
 
 
 def normalize_doi(doi: str) -> str:

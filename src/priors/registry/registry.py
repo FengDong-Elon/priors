@@ -202,7 +202,6 @@ class Registry:
                 raise HoldoutError("The holdout can only be opened for a pre-registered hypothesis.")
             if self.ledger.holdout_opened(reg.id):
                 raise HoldoutError(f"The holdout for {reg.id} has already been opened once.")
-            self.ledger.append("holdout_open", hypothesis_id=reg.id)
 
         effective = spec.model_copy(update={
             "status": status,
@@ -210,6 +209,8 @@ class Registry:
         })
         hs = reg.holdout_start if reg else holdout_start(self._clock().date())
         result = run_factor_backtest(effective, lib, period=period, holdout_from=hs)
+        if period == "holdout":   # recorded only once a result exists, so a failed run does not use up the holdout
+            self.ledger.append("holdout_open", hypothesis_id=reg.id)
         if reg is not None and reg.in_sample_seen and period == "in_sample":
             notes.append(SEEN_BEFORE)
         result.warnings.extend(notes)

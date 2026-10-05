@@ -379,6 +379,19 @@ def show_spec(s: Session) -> None:
 
 
 def gate_and_register(s: Session) -> None:
+    gate_form(s)
+    revise_panel(s)
+    if s.allow_exploratory:
+        st.caption("You can also test without registering, but results will be labeled exploratory and kept out of "
+                   "the main report.")
+        if st.button("Explore without registering"):
+            run_tests(s)
+    else:
+        st.caption("In this class, the theory gate and pre-registration come before any test.")
+
+
+def gate_form(s: Session) -> None:
+    """The hypothesis, the student's explanation, the theory gate, and pre-registration."""
     h = s.hypothesis
     st.markdown(f"**Hypothesis:** {h.statement}")
     st.markdown(f"**Expected return (from the literature):** {h.expected_low:.1%} to {h.expected_high:.1%} per year")
@@ -399,14 +412,6 @@ def gate_and_register(s: Session) -> None:
         if s.gate.passed and c2.button("Pre-register (this locks the plan)"):
             guarded("Registering...", s.register)
             rerun_if_ok()
-    revise_panel(s)
-    if s.allow_exploratory:
-        st.caption("You can also test without registering, but results will be labeled exploratory and kept out of "
-                   "the main report.")
-        if st.button("Explore without registering"):
-            run_tests(s)
-    else:
-        st.caption("In this class, the theory gate and pre-registration come before any test.")
 
 
 def conclude_control(s: Session) -> None:
@@ -516,7 +521,24 @@ def mentor_work(s: Session) -> None:
             run_tests(s)
         return
     show_explanation(s)
+    if s.registration is None:
+        with st.expander("Pre-register this hypothesis to unlock the sealed holdout", expanded=True):
+            st.caption("You have already seen these exploratory results, so the registration is marked "
+                       "'in-sample seen' and the sealed holdout, which no one has looked at, becomes the real test.")
+            gate_form(s)
+    else:
+        holdout_panel(s)
     revision_after_results(s)
+
+
+def holdout_panel(s: Session) -> None:
+    if s.registry.ledger.holdout_opened(s.registration.id):
+        st.info(f"The holdout for {s.registration.id} has been opened. Its result is final.", icon=":material/lock_open:")
+        return
+    with st.expander(f"Open the sealed holdout, from {s.registration.holdout_start} (only once per hypothesis)"):
+        ok = st.checkbox("I understand this can be done only once and the result is final.")
+        if ok and st.button("Open the holdout", type="primary"):
+            run_tests(s, period="holdout")
 
 
 def show_explanation(s: Session) -> None:
@@ -649,10 +671,7 @@ def analyst_or_dr_dong_work(s: Session) -> None:
                     st.markdown(f"**{title}**\n" + "\n".join(f"{i}. {x}" for i, x in enumerate(items, 1)))
             st.caption(s.dr_dong.footer)
     if s.registration is not None:
-        with st.expander("Open the sealed holdout (only once per hypothesis)"):
-            ok = st.checkbox("I understand this can be done only once and the result is final.")
-            if ok and st.button("Open the holdout"):
-                run_tests(s, period="holdout")
+        holdout_panel(s)
 
 
 # -------------------------------------------------------------- results tab
