@@ -1,2 +1,3 @@
 # Used by Streamlit Community Cloud. Editable install, so the app always runs the code in this repository.
 -e .[app]
+pandas>=2.1,<3

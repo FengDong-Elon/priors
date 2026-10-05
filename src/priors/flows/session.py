@@ -177,7 +177,8 @@ class Session:
         ])).lower())) - {"the", "and", "stocks", "stock", "returns", "return", "with", "that", "high", "low"}
         linked = {f for p in self.papers for f in p.factor_ids}
         info = self.lib.info
-        text = (info["name"].astype(str) + " " + info.get("economic_category", pd.Series("", index=info.index)).astype(str)).str.lower()
+        cat = info.get("economic_category", pd.Series("", index=info.index))
+        text = (info["name"].fillna("").astype(str) + " " + cat.fillna("").astype(str)).str.lower()
         score = text.map(lambda t: len(words & set(_WORD.findall(t)))).astype(float)
         score[score.index.isin(linked)] += 5
         score[score.index.isin([f + "_VW" for f in linked])] += 4

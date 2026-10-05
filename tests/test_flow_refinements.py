@@ -259,3 +259,9 @@ def test_sharadar_rate_limit_stops_without_retrying(tmp_path, monkeypatch):
     with pytest.raises(SDL.SharadarDownloadError, match="rate limit"):
         SDL.download_sharadar("goodkey", log=lambda m: None, session=Limited())
     assert Limited.calls == 1
+
+
+def test_candidates_tolerate_missing_categories(make_session):
+    s = to_proposal(make_session())
+    s.lib.info.loc[s.lib.info.index[0], "economic_category"] = None   # pandas 3 keeps this as NaN under astype(str)
+    assert len(s.candidates()) > 0
