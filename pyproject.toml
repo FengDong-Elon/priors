@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "priors-quant"
-version = "0.0.1"
+version = "1.0.0"
 description = "A literature-first AI research assistant for systematic investing."
 readme = "README.md"
 requires-python = ">=3.11"

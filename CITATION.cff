@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use Priors in teaching or research, please cite it as below."
+title: "Priors: a literature-first AI teaching tool for evidence-based factor investing"
+abstract: >-
+  Priors helps students turn an investment idea into a theory-backed,
+  pre-registered factor strategy, test it without data mining, revise it with
+  guidance, and receive a report and an optional journal-style review.
+type: software
+authors:
+  - family-names: Dong
+    given-names: Feng
+    affiliation: Elon University
+version: 1.0.0
+date-released: 2026-10-04
+license: MIT
+repository-code: "https://github.com/FengDong-Elon/priors"
+url: "https://priors-elon.streamlit.app/"
+keywords:
+  - factor investing
+  - asset pricing
+  - finance education
+  - pre-registration
+  - large language models
