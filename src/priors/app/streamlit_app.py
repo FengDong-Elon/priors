@@ -272,6 +272,9 @@ def start_screen() -> None:
         universe = c3.selectbox("Stock universe", ["russell3000", "russell1000"],
                                 format_func=lambda u: "Top 3,000 U.S. stocks" if u == "russell3000" else "Top 1,000 U.S. stocks")
         source = c4.selectbox("Stock data", sources, format_func=lambda x: SOURCES[x], disabled=len(sources) == 1)
+        if (projects_root() / slug(student or "student") / slug(project) / "session.json").exists():
+            st.caption(":material/history: A project with this name already exists and will reopen where you left "
+                       "off. For a fresh start, use a new project name.")
     if not HOSTED and "sharadar" not in sources:
         with st.expander("Use your own Sharadar data (downloads to this computer)"):
             st.caption("Enter your own Nasdaq Data Link API key with a Sharadar subscription. The data is saved on "
@@ -395,6 +398,19 @@ def gate_and_register(s: Session) -> None:
         st.caption("In this class, the theory gate and pre-registration come before any test.")
 
 
+def conclude_control(s: Session) -> None:
+    """Concluding 'not supported' ends the project, so it sits behind a confirmation."""
+    with st.popover("Conclude: not supported", icon=":material/block:", width="stretch"):
+        st.write("Use this only if the research does not support the idea. Priors writes a literature assessment "
+                 "instead of running tests, and the project is complete. You can withdraw it later.")
+        if s.card is not None and s.card.grade in ("strong", "moderate"):
+            st.warning(f"The evidence card grades this idea **{s.card.grade}**. You probably want to propose a "
+                       "strategy and test it instead.")
+        if st.button("Yes, conclude: not supported", key="confirm_conclude", type="primary"):
+            guarded("Writing the literature assessment...", s.conclude_unsupported)
+            st.rerun()
+
+
 def revise_panel(s: Session) -> None:
     with st.expander("Revise with the Mentor (free before any test)", expanded=bool(s.gate and not s.gate.passed)):
         for t in s.coaching:
@@ -411,9 +427,8 @@ def revise_panel(s: Session) -> None:
         if c2.button("Propose a different strategy"):
             guarded("Designing a strategy...", s.propose)
             st.rerun()
-        if c3.button("Conclude: not supported"):
-            guarded("Writing the literature assessment...", s.conclude_unsupported)
-            st.rerun()
+        with c3:
+            conclude_control(s)
 
 
 def revision_after_results(s: Session) -> None:
@@ -433,6 +448,13 @@ def show_unsupported(s: Session) -> None:
                          ("Better-supported directions", u.alternative_directions)):
         st.markdown(f"**{title}**\n" + "\n".join(f"- {x}" for x in items))
     st.caption("This is a complete result. Download the report on the Report tab.")
+    c1, c2 = st.columns(2)
+    if c1.button("Start a new idea", type="primary", icon=":material/add:", width="stretch"):
+        s.start_new_idea()
+        st.rerun()
+    if c2.button("Withdraw this conclusion and keep working", icon=":material/undo:", width="stretch"):
+        s.reopen()
+        st.rerun()
 
 
 def run_tests(s: Session, period: str = "in_sample") -> None:
@@ -469,9 +491,8 @@ def mentor_work(s: Session) -> None:
         if c1.button("Propose a strategy", type="primary"):
             guarded("Designing a strategy from published factors...", s.propose)
             st.rerun()
-        if c2.button("The research does not support it: conclude"):
-            guarded("Writing the literature assessment...", s.conclude_unsupported)
-            st.rerun()
+        with c2:
+            conclude_control(s)
         return
     show_spec(s)
     if s.registration is None and s.results is None:

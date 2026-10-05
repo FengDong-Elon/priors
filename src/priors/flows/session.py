@@ -406,6 +406,19 @@ class Session:
         self.save_state()
         return self.REVISION_NOTICE
 
+    def reopen(self) -> None:
+        """Withdraw a 'not supported' conclusion and keep working on the same idea and evidence card."""
+        self.unsupported = None
+        self.save_state()
+
+    def start_new_idea(self) -> None:
+        """Start over with a new idea in the same project. The trial ledger and registrations are kept."""
+        self.transcript, self.papers, self.coaching = [], [], []
+        self.idea = self.card = self.proposal = self.spec = self.hypothesis = self.gate = None
+        self.registration = self.results = self.unsupported = None
+        self.explanation, self.analyst_review, self.dr_dong = None, None, None
+        self.save_state()
+
     def conclude_unsupported(self) -> A.UnsupportedAssessment:
         """End the project without a backtest because the literature does not support the idea."""
         if self.card is None:

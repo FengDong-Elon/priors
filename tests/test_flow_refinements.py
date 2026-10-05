@@ -97,6 +97,17 @@ def test_unsupported_conclusion_and_report(make_session):
     assert again.unsupported == a                           # saved with the project
 
 
+def test_withdraw_the_conclusion_or_start_a_new_idea(make_session):
+    s = to_proposal(make_session())
+    s.conclude_unsupported()
+    s.reopen()
+    assert s.unsupported is None and s.card is not None and s.progress()["status"] == "in progress"
+    s.conclude_unsupported()
+    s.start_new_idea()
+    again = Session(s.registry.root, s.lib, FakeLLM(responder), state_data=STATE, clock=CLOCK)
+    assert again.unsupported is None and again.idea is None and again.card is None and again.transcript == []
+
+
 def test_progress_follows_the_class_stage(make_session):
     s = to_proposal(make_session(required_stage="tested"))
     assert s.progress()["status"] == "in progress" and "Dr. Dong review" not in s.progress()["steps"]

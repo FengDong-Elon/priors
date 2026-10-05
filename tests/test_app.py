@@ -152,6 +152,10 @@ def test_app_click_through_mentor(tmp_path, monkeypatch):
     assert not at.exception
     at.chat_input[0].set_value("buy recent winners").run()
     click("Search the research")
+    click("Yes, conclude: not supported")          # inside a confirmation popover
+    assert any("not supported by the literature" in h.value for h in at.subheader)
+    click("Withdraw this conclusion and keep working")
+    assert at.session_state["session"].unsupported is None
     click("Propose a strategy")
     click("Check the theory gate")
     assert any("passes the theory gate" in s.value for s in at.success)
