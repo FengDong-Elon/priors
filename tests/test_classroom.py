@@ -102,3 +102,13 @@ def test_dated_model_ids_use_the_right_price():
     assert price_for("claude-opus-5-5") == PRICES["claude-opus-5-5"]
     assert price_for("claude-opus-5-20260101") == PRICES["claude-opus-5"]      # not confused with opus-5-5
     assert price_for("some-new-model") == CONSERVATIVE
+
+
+def test_classroom_mode_does_not_need_the_proxy_packages():
+    """A hosted app installs only the app extras, without FastAPI."""
+    import subprocess
+    import sys
+
+    code = ("import sys; import priors.classroom, priors.budget; "
+            "assert 'fastapi' not in sys.modules and 'priors.proxy' not in sys.modules")
+    assert subprocess.run([sys.executable, "-c", code]).returncode == 0

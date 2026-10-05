@@ -11,7 +11,6 @@ import os
 import re
 from pathlib import Path
 
-import httpx
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
@@ -163,6 +162,8 @@ def sidebar() -> None:
                 st.caption(f"This week: ${llm.spent():.2f} of ${llm.student.config.weekly_budget_usd:.2f} used")
             elif who[0] not in ("own key", "local key") and PROXY_URL:
                 try:
+                    import httpx  # only needed with a separate proxy service
+
                     u = httpx.get(PROXY_URL.rstrip("/") + "/usage", timeout=10,
                                   headers={"x-api-key": classroom_token(*who)}).json()
                     st.caption(f"This week: ${u['spent_usd']:.2f} of ${u['budget_usd']:.2f} used")

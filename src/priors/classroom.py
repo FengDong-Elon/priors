@@ -28,7 +28,7 @@ import yaml
 
 from .llm.anthropic_llm import AnthropicLLM
 from .llm.base import T, Tier, Usage
-from .proxy import ClassConfig, Ledger, cost_usd, iso_week, parse_classes  # noqa: F401  (parse_classes re-exported)
+from .budget import ClassConfig, Ledger, cost_usd, iso_week, parse_classes  # noqa: F401  (parse_classes re-exported)
 
 CONFIG_ENV = "PRIORS_CLASSROOM"            # YAML text (for example from Streamlit secrets)
 CONFIG_PATH_ENV = "PRIORS_CLASSROOM_CONFIG"  # or a path to classroom.yaml
