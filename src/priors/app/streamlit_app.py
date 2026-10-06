@@ -541,14 +541,50 @@ def holdout_panel(s: Session) -> None:
             run_tests(s, period="holdout")
 
 
+def md(text: str) -> str:
+    """Markdown-safe text: a pair of dollar signs would otherwise render as a formula."""
+    return text.replace("$", r"\$")
+
+
+def headline(s: Session) -> None:
+    """The four key numbers of the current result, with its sample."""
+    res = s.results.outcome.result
+    m = res.metrics["composite"]
+    c = st.columns(4)
+    c[0].metric("Mean return per year", f"{m['mean_ann']:.1%}", border=True)
+    c[1].metric("Sharpe ratio", f"{m['sharpe']:.2f}", help=f"95% CI {m['sharpe_ci_low']:.2f} to {m['sharpe_ci_high']:.2f}", border=True)
+    c[2].metric("t-statistic (NW)", f"{m['t_stat_mean_nw']:.2f}", help="Harvey, Liu and Zhu (2016) suggest t > 3.", border=True)
+    c[3].metric("Max drawdown", f"{m['max_drawdown']:.0%}", border=True)
+    st.caption(f"{res.sample['start']} to {res.sample['end']} ({res.sample['months']} months) · before trading costs")
+
+
+def final_result(s: Session) -> None:
+    """The sealed-holdout result, stated plainly at the top of the page."""
+    res = s.results.outcome.result
+    with st.container(border=True):
+        section(f"Final result: sealed holdout for {s.registration.id}")
+        headline(s)
+        h = s.hypothesis
+        if h is not None:
+            mean = res.metrics["composite"]["mean_ann"]
+            where = ("inside" if h.expected_low <= mean <= h.expected_high
+                     else "above" if mean > h.expected_high else "below")
+            st.write(f"The literature led us to expect {h.expected_low:.1%} to {h.expected_high:.1%} per year; the "
+                     f"holdout earned {mean:.1%}, {where} that range. These months were sealed when the hypothesis was "
+                     "registered, so this is the out-of-sample test, and it is final.")
+
+
 def show_explanation(s: Session) -> None:
-    if s.results.outcome.status != "preregistered":
+    if s.registration is not None and s.results.outcome.result.period == "holdout":
+        final_result(s)
+    elif s.results.outcome.status != "preregistered":
         st.warning(EXPLORATORY_LABEL)
     if s.explanation:
-        st.markdown(s.explanation)
-    with st.expander("Required risk notes"):
-        for n in s.results.dossier.risk_notes:
-            st.markdown(f"- {n}")
+        st.markdown(md(s.explanation))
+    notes = s.results.dossier.risk_notes
+    if notes:
+        section("Required risk notes")
+        st.markdown("\n".join(f"- {md(n)}" for n in notes))
 
 
 def spec_builder(s: Session) -> None:
@@ -683,22 +719,20 @@ def results_tab(s: Session) -> None:
                 else "Run the tests to see results.")
         return
     res = r.outcome.result
-    if r.outcome.status != "preregistered":
-        st.warning(EXPLORATORY_LABEL)
-    m = res.metrics["composite"]
-    c = st.columns(4)
-    c[0].metric("Mean return per year", f"{m['mean_ann']:.1%}", border=True)
-    c[1].metric("Sharpe ratio", f"{m['sharpe']:.2f}", help=f"95% CI {m['sharpe_ci_low']:.2f} to {m['sharpe_ci_high']:.2f}", border=True)
-    c[2].metric("t-statistic (NW)", f"{m['t_stat_mean_nw']:.2f}", help="Harvey, Liu and Zhu (2016) suggest t > 3.", border=True)
-    c[3].metric("Max drawdown", f"{m['max_drawdown']:.0%}", border=True)
-    st.caption(f"{res.sample['start']} to {res.sample['end']} · before trading costs · {res.period.replace('_', ' ')}")
+    if res.period == "holdout":
+        section("Sealed holdout: the final, out-of-sample result")
+    else:
+        section("In-sample results" + ("" if r.outcome.status == "preregistered" else " (exploratory)"))
+        if r.outcome.status != "preregistered":
+            st.warning(EXPLORATORY_LABEL)
+    headline(s)
     st.image(charts.cumulative_growth(res.returns), width="stretch")
     for name, lines in r.dossier.sections.items():
         if name in ("Strategy", "Factor layer"):
             continue
         with st.expander(name):
             for line in lines:
-                st.markdown(f"- {line}")
+                st.markdown(f"- {md(line)}")
     if r.composite is not None:
         section("What each factor contributes")
         st.dataframe(pd.DataFrame({"Sharpe share": r.composite.shapley_share, "Risk share": r.composite.risk_contribution,

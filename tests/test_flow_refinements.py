@@ -265,3 +265,22 @@ def test_candidates_tolerate_missing_categories(make_session):
     s = to_proposal(make_session())
     s.lib.info.loc[s.lib.info.index[0], "economic_category"] = None   # pandas 3 keeps this as NaN under astype(str)
     assert len(s.candidates()) > 0
+
+
+def test_a_failed_holdout_run_does_not_use_up_the_holdout(make_session, monkeypatch):
+    import priors.registry.registry as R
+
+    s = to_proposal(make_session())
+    s.check_gate()
+    s.register()
+
+    def fails(*a, **k):
+        raise ConnectionError("network down")
+    real = R.run_factor_backtest
+    monkeypatch.setattr(R, "run_factor_backtest", fails)
+    with pytest.raises(ConnectionError):
+        s.run(period="holdout")
+    assert not s.registry.ledger.holdout_opened(s.registration.id)
+    monkeypatch.setattr(R, "run_factor_backtest", real)
+    s.run(period="holdout", placebo_draws=50)
+    assert s.registry.ledger.holdout_opened(s.registration.id)

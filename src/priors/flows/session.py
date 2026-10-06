@@ -296,6 +296,12 @@ class Session:
         dossier = build_dossier(res, val, comp, zoo, mech, st, gap, hold,
                                 self.registry.ledger.summary(), status=outcome.status)
         dossier.risk_notes += [n for n in notes if n not in dossier.risk_notes]
+        reg = self.registration
+        if reg is not None and reg.in_sample_seen:
+            dossier.add("Process", f"{reg.id} was registered after its exploratory run had been seen, so the ledger "
+                                   "counts that run as exploratory and the sealed holdout is the confirmatory test.")
+        if reg is not None and res.period == "holdout":
+            dossier.add("Process", f"This run is the one-time sealed holdout for {reg.id}; its result is final.")
         self.results = Results(outcome, val, comp, zoo, mech, st, gap, hold, dossier, notes)
         return self.results
 

@@ -125,7 +125,7 @@ def test_app_click_through_mentor(tmp_path, monkeypatch):
     monkeypatch.setenv("PRIORS_HOME", str(tmp_path / "home"))
     monkeypatch.setenv("PRIORS_AUTO_REFRESH", "0")
     monkeypatch.setenv("PRIORS_CACHE_DIR", str(tmp_path / "cache"))
-    monkeypatch.setattr(F.FactorLibrary, "load", classmethod(lambda cls, **kw: flow_lib()))
+    monkeypatch.setattr(F.FactorLibrary, "load", classmethod(lambda cls, **kw: flow_lib(end="2025-12")))
     monkeypatch.setattr(SD, "load_source", lambda source, universe: None)
     monkeypatch.setattr(SD, "available_sources", lambda: ["yfinance"])
     monkeypatch.setattr(S, "gather_papers", lambda llm, text, log=None: _papers(log))
@@ -185,11 +185,12 @@ def test_app_click_through_mentor(tmp_path, monkeypatch):
     click("Pre-register (this locks the plan)")
     assert at.session_state["session"].registration.in_sample_seen
     at.checkbox[0].check().run()
-    click("Open the holdout")                      # the synthetic data end before the holdout window
+    click("Open the holdout")
     assert not at.exception, at.exception
-    assert any("No holdout months" in e.value for e in at.error)
-    reg = at.session_state["session"].registration
-    assert not at.session_state["session"].registry.ledger.holdout_opened(reg.id)   # a failed run keeps the holdout
+    assert at.session_state["session"].results.outcome.result.period == "holdout", [e.value for e in at.error]
+    assert any("Final result: sealed holdout" in m.value for m in at.markdown)
+    assert any("Required risk notes" in m.value for m in at.markdown)
+    assert any("has been opened" in i.value for i in at.info)
 
 
 def test_sharadar_source_only_when_configured(tmp_path, monkeypatch):

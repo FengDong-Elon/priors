@@ -18,9 +18,9 @@ from priors.spec import StrategySpec
 CLOCK = lambda: datetime(2016, 1, 15, tzinfo=timezone.utc)  # noqa: E731  (holdout from 2011-01)
 
 
-def flow_lib(seed: int = 5) -> FactorLibrary:
+def flow_lib(seed: int = 5, end: str = "2015-12") -> FactorLibrary:
     rng = np.random.default_rng(seed)
-    idx = pd.period_range("1960-01", "2015-12", freq="M", name="month")
+    idx = pd.period_range("1960-01", end, freq="M", name="month")
     n = len(idx)
     cols = {"MKT_RF": 0.005 + 0.045 * rng.standard_normal(n),
             "Mom12m": 0.008 + 0.04 * rng.standard_normal(n),
