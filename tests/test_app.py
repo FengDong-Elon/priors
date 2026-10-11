@@ -261,3 +261,36 @@ def test_theme_config_matches_the_cli_flags():
     assert cfg["theme"]["sidebar"] == SIDEBAR and cfg["client"] == CLIENT
     assert "--theme.primaryColor=" + THEME["primaryColor"] in cli_flags()
     assert "--theme.showWidgetBorder=true" in cli_flags()
+
+
+def test_app_opens_a_project_without_chen_zimmermann(tmp_path, monkeypatch):
+    import streamlit as st
+    from streamlit.testing.v1 import AppTest
+
+    import priors.factors as F
+    import priors.stockdata as SD
+    from priors.llm import FakeLLM
+    from test_flows import flow_lib, responder
+
+    monkeypatch.setenv("PRIORS_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("PRIORS_AUTO_REFRESH", "0")
+    monkeypatch.setenv("PRIORS_CACHE_DIR", str(tmp_path / "cache"))
+
+    def load(cls, include=("french", "hxz", "cz", "cz_vw"), **kw):
+        if "cz" in include:
+            raise ValueError("Google Drive returned a web page instead of PredictorLSretWide.csv; try again later.")
+        return flow_lib()
+    monkeypatch.setattr(F.FactorLibrary, "load", classmethod(load))
+    monkeypatch.setattr(SD, "load_source", lambda source, universe: None)
+    monkeypatch.setattr(SD, "available_sources", lambda: ["yfinance"])
+    st.cache_resource.clear()                  # other tests may have cached a full library
+
+    at = AppTest.from_file(str(APP), default_timeout=120)
+    at.run()
+    at.session_state["llm"] = FakeLLM(responder)
+    at.session_state["who"] = ("own key", "")
+    at.run()
+    [b for b in at.button if b.label == "Start in Mentor"][0].click().run()
+    assert not at.exception, at.exception
+    assert at.session_state["session"] is not None
+    assert any("Chen-Zimmermann" in i.value for i in at.info)

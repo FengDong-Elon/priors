@@ -110,8 +110,27 @@ def steps(items: list[tuple[str, str]], done: list[bool] | None = None) -> None:
 # ----------------------------------------------------------------- resources
 
 @st.cache_resource(show_spinner="Loading published factor data...")
-def library() -> FactorLibrary:
+def full_library() -> FactorLibrary:
     return FactorLibrary.load()
+
+
+@st.cache_resource(show_spinner="Loading published factor data...", ttl=900)
+def basic_library() -> FactorLibrary:
+    return FactorLibrary.load(include=("french", "hxz"))
+
+
+LIBRARY_NOTICE = ("The Chen-Zimmermann library of published predictors could not be downloaded right now (its host "
+                  "limits downloads), so this project has the Ken French and Hou-Xue-Zhang factors only. Close the "
+                  "project and open it again later to get the full library.")
+
+
+def library() -> tuple[FactorLibrary, str | None]:
+    """The full factor library; if Chen-Zimmermann is unavailable, the French and Hou-Xue-Zhang factors."""
+    try:
+        return full_library(), None      # a failure is not cached, so the next project tries again
+    except Exception:
+        traceback.print_exc()
+        return basic_library(), LIBRARY_NOTICE
 
 
 AUTO_REFRESH = os.environ.get("PRIORS_AUTO_REFRESH", "1") == "1"   # build a prices-only snapshot when stale
@@ -332,7 +351,7 @@ def mode_cards(clickable: bool) -> str | None:
 
 def open_project(student: str, project: str, mode: str, universe: str, source: str = "yfinance",
                  keep_mode: bool = False) -> None:
-    lib = library()
+    lib, lib_notice = library()
     snap = snapshot(source, universe)
     root = projects_root() / slug(student or "student") / slug(project)
     llm = state()["llm"]
@@ -344,10 +363,12 @@ def open_project(student: str, project: str, mode: str, universe: str, source: s
         s.mode = mode                   # the mode chosen now wins over the one saved last time
     state().update(session=s, project_name=project, student=student,
                    snapshot_meta=snap.meta if snap else None)
+    notices = [lib_notice] if lib_notice else []
     if snap is None:
-        state()["data_notice"] = "Stock data is not available right now, so the stock layer is skipped. Everything else works."
+        notices.append("Stock data is not available right now, so the stock layer is skipped. Everything else works.")
     elif snap.meta.get("status") not in (None, "current", "refreshed"):
-        state()["data_notice"] = snap.meta["status"]
+        notices.append(snap.meta["status"])
+    state()["data_notice"] = " ".join(notices) or None   # replaces any notice from the previous project
     st.rerun()
 
 
